@@ -176,7 +176,7 @@
       function animate(now) {
         const elapsed = Math.min(now - lastFrame, 40);
         lastFrame = now;
-        rotation += elapsed * 0.0225;
+        rotation += elapsed * 0.225;
         drawWheel();
         if (spinning) animationId = requestAnimationFrame(animate);
       }
