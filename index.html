@@ -89,9 +89,14 @@
       let options = ['旅行','电影','奶茶','读书','运动','休息'];
       let rotation = 0;
       let spinning = false;
+      let stopping = false;
       let animationId = null;
       let lastFrame = 0;
       let selectedIndex = 0;
+      let stopStarted = 0;
+      let stopStartRotation = 0;
+      let stopTargetRotation = 0;
+      let stopDuration = 0;
 
       function normalizeAngle(angle) { return ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2); }
       function drawWheel() {
@@ -174,6 +179,22 @@
       }
 
       function animate(now) {
+        if (stopping) {
+          const progress = Math.min((now - stopStarted) / stopDuration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          rotation = stopStartRotation + (stopTargetRotation - stopStartRotation) * eased;
+          drawWheel();
+          if (progress < 1) {
+            animationId = requestAnimationFrame(animate);
+          } else {
+            const slice = Math.PI * 2 / options.length;
+            const angleAtPointer = normalizeAngle(-Math.PI / 2 - rotation);
+            selectedIndex = Math.floor(normalizeAngle(angleAtPointer + Math.PI / 2) / slice) % options.length;
+            stopping = false;
+            finishSpin();
+          }
+          return;
+        }
         const elapsed = Math.min(now - lastFrame, 40);
         lastFrame = now;
         rotation += elapsed * 0.225;
@@ -183,19 +204,21 @@
 
       function startSpin() {
         if (spinning || options.length < 2) return;
-        lastFrame = performance.now(); spinning = true;
+        lastFrame = performance.now(); spinning = true; stopping = false;
         startButton.disabled = true; stopButton.disabled = false; countInput.disabled = true; applyCount.disabled = true;
         result.textContent = '转盘正在旋转…';
         animationId = requestAnimationFrame(animate);
       }
 
       function stopSpin() {
-        if (!spinning) return;
-        if (animationId) cancelAnimationFrame(animationId);
-        const slice = Math.PI * 2 / options.length;
-        const angleAtPointer = normalizeAngle(-Math.PI / 2 - rotation);
-        selectedIndex = Math.floor(normalizeAngle(angleAtPointer + Math.PI / 2) / slice) % options.length;
-        finishSpin(); drawWheel();
+        if (!spinning || stopping) return;
+        stopping = true;
+        stopStartRotation = rotation;
+        stopTargetRotation = rotation + Math.PI * 2 * (0.3 + Math.random() * 2.7);
+        stopDuration = 1300 + Math.random() * 1500;
+        stopStarted = performance.now();
+        stopButton.disabled = true;
+        result.textContent = '转盘正在减速…';
       }
 
       applyCount.addEventListener('click', setCount);
